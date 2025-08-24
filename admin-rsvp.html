@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>RSVP Admin Dashboard</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f8f9fa;
+      margin: 0;
+      padding: 20px;
+    }
+    h2 {
+      text-align: center;
+      margin-bottom: 10px;
+      font-size: 28px;
+    }
+    p {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+    .admin-actions {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+    .admin-actions button {
+      background: #2c3e50;
+      color: #fff;
+      border: none;
+      padding: 10px 16px;
+      margin: 5px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 14px;
+      transition: background 0.3s ease;
+    }
+    .admin-actions button:hover {
+      background: #34495e;
+    }
+    .admin-table-wrap {
+      overflow-x: auto;
+      margin-top: 10px;
+    }
+    table {
+      width: 100%;
+      max-width: 900px;
+      margin: 0 auto;
+      border-collapse: collapse;
+      background: #fff;
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 6px 16px rgba(0,0,0,0.1);
+    }
+    th, td {
+      padding: 12px 15px;
+      border-bottom: 1px solid #eee;
+      text-align: left;
+    }
+    th {
+      background: #2c3e50;
+      color: #fff;
+      font-weight: bold;
+    }
+    tr:hover {
+      background: #f1f1f1;
+    }
+  </style>
+</head>
+<body>
+  <h2>📊 RSVP Admin Dashboard</h2>
+  <p>Lihat semua tamu yang sudah konfirmasi di sini</p>
+
+  <div class="admin-actions">
+    <button onclick="exportCSV()">⬇️ Export CSV</button>
+    <button onclick="exportExcel()">⬇️ Export Excel</button>
+  </div>
+
+  <div class="admin-table-wrap">
+    <table id="admin-table">
+      <thead>
+        <tr>
+          <th>Nama</th>
+          <th>Kehadiran</th>
+          <th>Jumlah</th>
+          <th>Waktu Update</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td colspan="4">Loading...</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <script>
+    const apiURL = "PASTE_URL_WEB_APP_KAMU"; // URL Google Apps Script Web App
+    let guestData = [];
+
+    async function loadGuests() {
+      const tableBody = document.querySelector("#admin-table tbody");
+      tableBody.innerHTML = "<tr><td colspan='4'>⏳ Memuat data...</td></tr>";
+
+      try {
+        const res = await fetch(apiURL + "?list=all");
+        const data = await res.json();
+        guestData = data;
+
+        if (data.length > 0) {
+          tableBody.innerHTML = "";
+          data.forEach(g => {
+            tableBody.innerHTML += `
+              <tr>
+                <td>${g.nama}</td>
+                <td>${g.kehadiran || "-"}</td>
+                <td>${g.jumlah || "-"}</td>
+                <td>${g.waktu || "-"}</td>
+              </tr>
+            `;
+          });
+        } else {
+          tableBody.innerHTML = "<tr><td colspan='4'>❌ Tidak ada data tamu</td></tr>";
+        }
+      } catch (err) {
+        tableBody.innerHTML = "<tr><td colspan='4'>⚠️ Gagal memuat data</td></tr>";
+      }
+    }
+
+    function exportCSV() {
+      if (!guestData.length) return alert("Data kosong!");
+      let csv = "Nama,Kehadiran,Jumlah,Waktu Update\n";
+      guestData.forEach(g => {
+        csv += `"${g.nama}","${g.kehadiran}","${g.jumlah}","${g.waktu}"\n`;
+      });
+      downloadFile(csv, "RSVP_Tamu.csv", "text/csv");
+    }
+
+    function exportExcel() {
+      if (!guestData.length) return alert("Data kosong!");
+      let table = `
+        <table border="1">
+          <tr><th>Nama</th><th>Kehadiran</th><th>Jumlah</th><th>Waktu Update</th></tr>
+          ${guestData.map(g => `
+            <tr>
+              <td>${g.nama}</td>
+              <td>${g.kehadiran || "-"}</td>
+              <td>${g.jumlah || "-"}</td>
+              <td>${g.waktu || "-"}</td>
+            </tr>`).join("")}
+        </table>
+      `;
+      const blob = new Blob([table], { type: "application/vnd.ms-excel" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "RSVP_Tamu.xls";
+      a.click();
+    }
+
+    function downloadFile(content, fileName, mimeType) {
+      const blob = new Blob([content], { type: mimeType });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = fileName;
+      a.click();
+    }
+
+    document.addEventListener("DOMContentLoaded", loadGuests);
+  </script>
+</body>
+</html>
